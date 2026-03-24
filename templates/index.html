@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EXB/XML Converter</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+  <!-- MAIN CONTENT CENTERED -->
+  <main class="flex-grow-1 d-flex justify-content-center align-items-center">
+    <div class="w-100" style="max-width: 600px;">
+
+      <h1 class="text-center mb-4">EXB/XML Converter</h1>
+
+      <form method="POST" enctype="multipart/form-data">
+
+        <!-- FILE INPUT -->
+        <div class="mb-3">
+          <label for="file" class="form-label">XML/EXB file</label>
+          <input 
+            class="form-control {% if error %}is-invalid{% endif %}" 
+            type="file" 
+            id="file" 
+            name="file" 
+            accept=".xml,.exb"
+          >
+          {% if error %}
+          <div class="invalid-feedback">
+            {{ error }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- MODEL SELECT -->
+        <div class="mb-3">
+          <label for="model" class="form-label">Conversion model</label>
+          <select class="form-select" id="model" name="model">
+            <option value="" selected>Select a model</option>
+            <option value="model1">Model 1</option>
+            <option value="model2">Model 2</option>
+          </select>
+        </div>
+
+        <!-- BUTTON -->
+        <div class="text-center">
+          <button type="submit" class="btn btn-feri px-4 py-2">
+            Start conversion
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="text-center py-4 mt-auto">
+    <div class="text-white">
+      Gonzalo Agúndez Sáez |
+      PROJECT 2026 |
+      Faculty of Electrical Engineering and Computer Science |
+      University of Maribor
+    </div>
+  </footer>
+
+  <!-- Custom JS -->
+  <script src="{{ url_for('static', filename='js/clean_errors.js') }}"></script>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+body {
+  background-color: #f8f9fa;
+}
+
+h1 {
+  color: #003366;
+  font-weight: 600;
+}
+
+.btn-feri {
+  background-color: #003366;
+  color: white;
+  border: none;
+}
+
+.btn-feri:hover {
+  background-color: #00264d;
+  color: white;
+}
+
+footer {
+  background-color: #003366;
+}
