@@ -3,6 +3,12 @@
 A lightweight Flask-based tool for converting and normalizing transcription files in **XML** and **EXB** formats.  
 The application processes linguistic tiers, applies a selected text‑conversion model, and generates a new normalized tier while preserving the original structure.
 
+## Interface Preview
+
+Below is a screenshot of the application's main interface:
+
+![Interface Screenshot](static/interface.png)
+
 ---
 
 ## Features
