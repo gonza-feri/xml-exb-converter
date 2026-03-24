@@ -56,8 +56,9 @@ project/
 └── static/
     ├── css/
     │   └── styles.css
-    └── js/
-        └── clean_errors.js
+    ├── js/
+    │   └── clean_errors.js
+    └── interface.png
 ```
 
 ---
