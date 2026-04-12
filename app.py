@@ -24,11 +24,11 @@ def detokenize(text):
     for punct in listRight:
         text = text.replace(punct + " ", punct)
 
-     # Remove spaces around punctuation that should be tight
+    # Remove spaces around punctuation that should be tight
     for punct in listBoth:
         text = text.replace(" " + punct + " ", punct)
-    return text
 
+    return text
 
 # ---------------------------------------------------------
 # Convert the text of an event using the selected model
@@ -86,20 +86,24 @@ def index():
         error_message = "No files have been sent."
         return render_template("index.html", error=error_message)
 
-    # Read file content
+    # Read file content (exact original text preserved)
     file_bytes = uploaded_file.read()
+    file_text = file_bytes.decode("utf-8")
 
-    # Parse XML/EXB structure
+    # Parse XML/EXB structure (only for locating tiers)
     try:
         tree = ET.ElementTree(ET.fromstring(file_bytes))
     except ET.ParseError as e:
         error_message = f"Parsing error: the file is not well‑formed XML/EXB ({str(e)})"
         return render_template("index.html", error=error_message)
-    
+
     root = tree.getroot()
 
     # Work on a copy of the tier list to avoid iteration issues
     tiers = list(root.iter("tier"))
+
+    # We will progressively insert each new tier_norm into the original text
+    final_text = file_text
 
     for tier in tiers:
         # Only process tiers with category="v" and type="t"
@@ -133,39 +137,37 @@ def index():
             original_text = event.text or ""
             modified_text = convertText(original_text, model)
             new_event.text = modified_text
+            # Add newline after each new event (only for added tiers)
+            new_event.tail = "\n"
             new_tier.append(new_event)
 
-        # Insert the new tier before the original one
-        children = list(parent)
-        idx = children.index(tier)
-        parent.insert(idx, new_tier)
+        # Convert the new tier to text
+        tier_norm_text = ET.tostring(new_tier, encoding="unicode")
 
-        # Modify the original tier (mark as colloquial)
-        tier.set("category", "collog")
-        tier.set("type", "a")
+        # Convert original tier to text (as ElementTree serializes it)
+        # This is used ONLY to locate the tier in the original file
+        tier_original_text = ET.tostring(tier, encoding="unicode")
 
-    # Pretty-print XML using minidom
-    from xml.dom import minidom
+        # Find the position of the original tier in the original file
+        pos = final_text.find(tier_original_text)
 
-    rough_string = ET.tostring(root, encoding="utf-8")
-    reparsed = minidom.parseString(rough_string)
-
-    # Generate formatted XML with explicit encoding
-    pretty_xml = reparsed.toprettyxml(indent="  ", encoding="utf-8")
-
-    # Remove blank lines added by minidom
-    pretty_xml = b"\n".join(
-        [line for line in pretty_xml.split(b"\n") if line.strip()]
-    )
+        if pos != -1:
+            # Insert the new tier_norm immediately before the original tier
+            final_text = final_text[:pos] + tier_norm_text + final_text[pos:]
+            # Modify the original tier
+            final_text = final_text.replace(
+                tier_original_text,
+                tier_original_text.replace('category="v"', 'category="colloq"').replace('type="t"', 'type="a"')
+            )
 
     # ---------------------------------------------------------
-    # Prepare file for download
+    # Prepare file for download (original + inserted tiers)
     # ---------------------------------------------------------
     output = BytesIO()
-    output.write(pretty_xml)
+    output.write(final_text.encode("utf-8"))
     output.seek(0)
 
-     # Build output filename
+    # Build output filename
     original_name = os.path.splitext(uploaded_file.filename)[0]
     original_ext = os.path.splitext(uploaded_file.filename)[1]
     download_name = f"{original_name}_converted{original_ext}"

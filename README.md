@@ -19,7 +19,7 @@ Below is a screenshot of the application's main interface:
   - `category="v"`
   - `type="t"`
 - Creation of a new normalized tier (`category="norm"`, `type="t"`).
-- Modification of the original tier to (`category="collog"`, `type="a"`).
+- Modification of the original tier to (`category="colloq"`, `type="a"`).
 - Tokenization → model processing → detokenization pipeline.
 - Clean and responsive interface using **Bootstrap 5**.
 - Download of the converted file with the original extension preserved.
@@ -36,7 +36,7 @@ Below is a screenshot of the application's main interface:
    - It is sent to the selected model (currently simulated).
    - The output is detokenized to restore natural punctuation spacing.
 4. A new normalized tier is inserted before the original one.
-5. The original tier is re-labeled as a collog tier.
+5. The original tier is re-labeled as a colloq tier.
 6. The final XML is formatted and returned as a downloadable file.
 
 ---
