@@ -4,6 +4,7 @@ from io import BytesIO
 import os
 import xmlrpc.client
 from nltk.tokenize import wordpunct_tokenize as tokenize
+import re
 
 app = Flask(__name__)
 
@@ -11,7 +12,6 @@ app = Flask(__name__)
 # Utility: Fix spacing around punctuation after detokenizing
 # ---------------------------------------------------------
 def detokenize(text):
-    # Punctuation rules for spacing adjustments
     listLeft = ['.','!','?',',']
     listBoth = ['-','/',"'",]
     listRight = []
@@ -29,6 +29,7 @@ def detokenize(text):
         text = text.replace(" " + punct + " ", punct)
 
     return text
+
 
 # ---------------------------------------------------------
 # Convert the text of an event using the selected model
@@ -59,6 +60,7 @@ def convertText(text, model):
 
     return results.rstrip("\n")
 
+
 # ---------------------------------------------------------
 # Helper: Find the parent element of a given XML node
 # ---------------------------------------------------------
@@ -68,6 +70,7 @@ def find_parent(root, child):
             if elem is child:
                 return parent
     return None
+
 
 # ---------------------------------------------------------
 # Main route: upload → process → return converted EXB/XML
@@ -113,8 +116,9 @@ def index():
         if not (cat == "v" and typ == "t"):
             continue
 
-        parent = find_parent(root, tier)
-        if parent is None:
+        # Extract tier ID (used to locate the original tier in the text)
+        tier_id = tier.attrib.get("id")
+        if not tier_id:
             continue
 
         # Copy original tier attributes
@@ -126,10 +130,7 @@ def index():
         new_tier.set("type", "t")
 
         # Generate new tier ID
-        if "id" in new_tier.attrib:
-            new_tier.set("id", new_tier.get("id") + "_norm")
-        else:
-            new_tier.set("id", "auto_norm")
+        new_tier.set("id", tier_id + "_norm")
 
         # Copy events and replace text with converted version
         for event in tier.findall("event"):
@@ -137,28 +138,36 @@ def index():
             original_text = event.text or ""
             modified_text = convertText(original_text, model)
             new_event.text = modified_text
-            # Add newline after each new event (only for added tiers)
+
+            # NEW: Add newline after each new event (only for added tiers)
             new_event.tail = "\n"
+
             new_tier.append(new_event)
 
         # Convert the new tier to text
-        tier_norm_text = ET.tostring(new_tier, encoding="unicode")
+        tier_norm_text = ET.tostring(new_tier, encoding="unicode") + "\n"
 
-        # Convert original tier to text (as ElementTree serializes it)
-        # This is used ONLY to locate the tier in the original file
-        tier_original_text = ET.tostring(tier, encoding="unicode")
+        # ---------------------------------------------------------
+        # Locate the original tier in the text using regex (order‑independent)
+        # ---------------------------------------------------------
+        pattern = rf'<tier[^>]*\bid="{re.escape(tier_id)}"[^>]*>'
+        match = re.search(pattern, final_text)
 
-        # Find the position of the original tier in the original file
-        pos = final_text.find(tier_original_text)
+        if match:
+            print("FOUND:", match.group(0))
 
-        if pos != -1:
+            pos = match.start()
+
             # Insert the new tier_norm immediately before the original tier
             final_text = final_text[:pos] + tier_norm_text + final_text[pos:]
-            # Modify the original tier
-            final_text = final_text.replace(
-                tier_original_text,
-                tier_original_text.replace('category="v"', 'category="colloq"').replace('type="t"', 'type="a"')
-            )
+
+            # Modify the original tier attributes in the text
+            tier_tag = match.group(0)
+            tier_tag_modified = tier_tag
+            tier_tag_modified = re.sub(r'category="v"', 'category="colloq"', tier_tag_modified)
+            tier_tag_modified = re.sub(r'type="t"', 'type="a"', tier_tag_modified)
+
+            final_text = final_text.replace(tier_tag, tier_tag_modified)
 
     # ---------------------------------------------------------
     # Prepare file for download (original + inserted tiers)
