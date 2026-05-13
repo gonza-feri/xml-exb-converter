@@ -1,12 +1,56 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, jsonify, render_template, request, send_file, request, session
 import xml.etree.ElementTree as ET
 from io import BytesIO
 import os
 import xmlrpc.client
 from nltk.tokenize import wordpunct_tokenize as tokenize
 import re
+import json
 
 app = Flask(__name__)
+app.secret_key = "key"
+
+# Full path to the JSON
+RUNTIME_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config_runtime.json")
+
+def load_runtime_config():
+    """Carga la configuración dinámica desde config_runtime.json."""
+    with open(RUNTIME_CONFIG_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_runtime_config(data):
+    """Guarda la configuración dinámica en config_runtime.json."""
+    with open(RUNTIME_CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+@app.route("/get_settings", methods=["GET"])
+def get_settings():
+    cfg = load_runtime_config()
+    return jsonify(cfg)
+
+@app.route("/update_settings", methods=["POST"])
+def update_settings():
+    data = request.get_json()
+
+    ip = data.get("ip")
+    port = data.get("port")
+
+    if not ip or not port:
+        return jsonify({"status": "error", "message": "Invalid data"}), 400
+
+    try:
+        port = int(port)
+    except ValueError:
+        return jsonify({"status": "error", "message": "Port must be a number"}), 400
+
+    cfg = load_runtime_config()
+    cfg["RPC_SERVER_IP"] = ip
+    cfg["RPC_SERVER_PORT"] = port
+
+    save_runtime_config(cfg)
+
+    return jsonify({"status": "ok"})
+
 
 # ---------------------------------------------------------
 # Utility: Fix spacing around punctuation after detokenizing
@@ -36,29 +80,90 @@ def detokenize(text):
 # (tokenize → send to model → detokenize)
 # ---------------------------------------------------------
 def convertText(text, model):
-    url = "http://localhost:6000/RPC2"
-    proxy = xmlrpc.client.ServerProxy(url)
 
+    # ---------------------------------------------------------
+    # Load dynamic configuration from config_runtime.json
+    # ---------------------------------------------------------
+    cfg = load_runtime_config()
+    RPC_SERVER_IP = cfg.get("RPC_SERVER_IP", "localhost")
+    RPC_SERVER_PORT = cfg.get("RPC_SERVER_PORT", 6000)
+    RPC_TIMEOUT = cfg.get("RPC_TIMEOUT", 10)
+
+    # ---------------------------------------------------------
+    # ACTUAL CODE (commented out for now)
+    # ---------------------------------------------------------
+    # url = f"http://{RPC_SERVER_IP}:{RPC_SERVER_PORT}/RPC2"
+    #
+    # try:
+    #     proxy = xmlrpc.client.ServerProxy(
+    #         url,
+    #         allow_none=True,
+    #         use_datetime=False,
+    #         timeout=RPC_TIMEOUT
+    #     )
+    # except Exception:
+    #     return None, "[ERROR] Cannot connect to RPC server"
+    # ---------------------------------------------------------
+
+    # Since the connection is established, there are no server errors
     lines = text.split('\n')
     results = ""
 
-    for line in lines:
-        tokens = tokenize(line)
-        line_tok = ' '.join(tokens)
-        params = {
-            "text": line_tok,
-            "align": "false",
-            "report-all-factors": "false",
-            "model": model,
-        }
-        # result = proxy.translate(params)['text']
-        # Placeholder result while the real server is unavailable:
-        result = line_tok.upper()
+    # ---------------------------------------------------------
+    # MODEL 1
+    # ---------------------------------------------------------
+    if model == "model1":
+        for line in lines:
+            tokens = tokenize(line)
+            line_tok = ' '.join(tokens)
 
-        result = detokenize(result)
-        results += result + "\n"
+            params = {
+                "text": line_tok,
+                "align": "false",
+                "report-all-factors": "false",
+                "model": model,
+            }
 
-    return results.rstrip("\n")
+            # Actual call (when the server exists)
+            # result = proxy.translate(params)['text']
+
+            # Temporary simulation
+            result = line_tok.upper()
+
+            result = detokenize(result)
+            results += result + "\n"
+
+        return results.rstrip("\n"), None
+
+    # ---------------------------------------------------------
+    # MODEL 2
+    # ---------------------------------------------------------
+    elif model == "model2":
+        for line in lines:
+            tokens = tokenize(line)
+            line_tok = ' '.join(tokens)
+
+            params = {
+                "text": line_tok,
+                "align": "false",
+                "report-all-factors": "false"
+            }
+
+            # Actual call (when the server exists)
+            # result = proxy.translate(params)['text']
+
+            # Temporary simulation
+            result = f"[SIMULATED_MODEL_2] {line_tok}"
+
+            result = detokenize(result)
+            results += result + "\n"
+
+        return results.rstrip("\n"), None
+
+    # ---------------------------------------------------------
+    # Unknown model
+    # ---------------------------------------------------------
+    return None, "[ERROR] Unknown model selected"
 
 
 # ---------------------------------------------------------
@@ -73,95 +178,106 @@ def find_parent(root, child):
 
 
 # ---------------------------------------------------------
-# Main route: upload → process → return converted EXB/XML
+# Main route: upload -> process -> return converted EXB/XML
 # ---------------------------------------------------------
 @app.route("/", methods=["GET", "POST"])
 def index():
-    if request.method == "GET":
-        return render_template("index.html")
 
-    # Retrieve uploaded file and selected model
+    # ---------------------------------------------------------
+    # GET -> Show blank page (no file; template will be loaded if you wish)
+    # ---------------------------------------------------------
+    if request.method == "GET":
+        selected_model = session.get("selected_model")
+        return render_template("index.html", selected_model=selected_model)
+
+    # ---------------------------------------------------------
+    # POST -> process conversion
+    # ---------------------------------------------------------
     uploaded_file = request.files.get("file")
     model = request.form.get("model")
 
-    # Validate file presence
-    if not uploaded_file or uploaded_file.filename == "":
-        error_message = "No files have been sent."
-        return render_template("index.html", error=error_message)
+    session["selected_model"] = model
 
-    # Read file content (exact original text preserved)
+    # Validation: mandatory model
+    if not model:
+        return render_template("index.html",
+                               error="Please select a model before converting.",
+                               selected_model=model)
+
+    # Validation: mandatory file
+    if not uploaded_file or uploaded_file.filename == "":
+        return render_template("index.html",
+                               error="No files have been sent.",
+                               selected_model=model)
+
+    # Read the original file
     file_bytes = uploaded_file.read()
     file_text = file_bytes.decode("utf-8")
 
-    # Parse XML/EXB structure (only for locating tiers)
+    # Parse XML/EXB
     try:
         tree = ET.ElementTree(ET.fromstring(file_bytes))
     except ET.ParseError as e:
-        error_message = f"Parsing error: the file is not well‑formed XML/EXB ({str(e)})"
-        return render_template("index.html", error=error_message)
+        return render_template("index.html",
+                               error=f"Parsing error: the file is not well‑formed XML/EXB ({str(e)})",
+                               selected_model=model)
 
     root = tree.getroot()
-
-    # Work on a copy of the tier list to avoid iteration issues
     tiers = list(root.iter("tier"))
-
-    # We will progressively insert each new tier_norm into the original text
     final_text = file_text
 
+    # ---------------------------------------------------------
+    # Process each tier
+    # ---------------------------------------------------------
     for tier in tiers:
-        # Only process tiers with category="v" and type="t"
+
         cat = tier.attrib.get("category", "")
         typ = tier.attrib.get("type", "")
 
         if not (cat == "v" and typ == "t"):
             continue
 
-        # Extract tier ID (used to locate the original tier in the text)
         tier_id = tier.attrib.get("id")
         if not tier_id:
             continue
 
-        # Copy original tier attributes
         original_attrib = tier.attrib.copy()
 
-        # Create the new "normalized" tier
         new_tier = ET.Element("tier", original_attrib)
         new_tier.set("category", "norm")
         new_tier.set("type", "t")
-
-        # Generate new tier ID
         new_tier.set("id", tier_id + "_norm")
 
-        # Copy events and replace text with converted version
+        # Process events
         for event in tier.findall("event"):
             new_event = ET.Element("event", event.attrib)
             original_text = event.text or ""
-            modified_text = convertText(original_text, model)
-            new_event.text = modified_text
 
-            # NEW: Add newline after each new event (only for added tiers)
+            # Secure conversion
+            converted, error = convertText(original_text, model)
+
+            if error:
+                # Cancel conversion and display an error message
+                return render_template("index.html",
+                                       error=error,
+                                       selected_model=model)
+
+            new_event.text = converted
             new_event.tail = "\n"
-
             new_tier.append(new_event)
 
-        # Convert the new tier to text
+        # Convert tier_norm to text
         tier_norm_text = ET.tostring(new_tier, encoding="unicode") + "\n"
 
-        # ---------------------------------------------------------
-        # Locate the original tier in the text using regex (order‑independent)
-        # ---------------------------------------------------------
+        # Insert before the original tier
         pattern = rf'<tier[^>]*\bid="{re.escape(tier_id)}"[^>]*>'
         match = re.search(pattern, final_text)
 
         if match:
-            print("FOUND:", match.group(0))
-
             pos = match.start()
-
-            # Insert the new tier_norm immediately before the original tier
             final_text = final_text[:pos] + tier_norm_text + final_text[pos:]
 
-            # Modify the original tier attributes in the text
+            # Modify attributes of the original tier
             tier_tag = match.group(0)
             tier_tag_modified = tier_tag
             tier_tag_modified = re.sub(r'category="v"', 'category="colloq"', tier_tag_modified)
@@ -170,13 +286,12 @@ def index():
             final_text = final_text.replace(tier_tag, tier_tag_modified)
 
     # ---------------------------------------------------------
-    # Prepare file for download (original + inserted tiers)
+    # Prepare the final file for download
     # ---------------------------------------------------------
     output = BytesIO()
     output.write(final_text.encode("utf-8"))
     output.seek(0)
 
-    # Build output filename
     original_name = os.path.splitext(uploaded_file.filename)[0]
     original_ext = os.path.splitext(uploaded_file.filename)[1]
     download_name = f"{original_name}_converted{original_ext}"
@@ -187,6 +302,7 @@ def index():
         download_name=download_name,
         mimetype="application/xml"
     )
+
 
 
 # ---------------------------------------------------------
