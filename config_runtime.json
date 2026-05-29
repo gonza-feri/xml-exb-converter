@@ -1,5 +1,6 @@
 {
-    "RPC_SERVER_IP": "localhost",
-    "RPC_SERVER_PORT": 6000,
-    "RPC_TIMEOUT": 10
+    "RPC_SERVER_URL": "https://dsplab-demo.ietk.um.si/trsl/spk2std",
+    "saved_urls": [
+        "https://dsplab-demo.ietk.um.si/trsl/spk2std"
+    ]
 }

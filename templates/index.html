@@ -11,19 +11,18 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
   <style>
-    /* SETTINGS ICON */
+    /* ── SETTINGS ICON ──────────────────────────────────────────────── */
     .settings-icon {
       cursor: pointer;
       color: #555;
       transition: transform 0.2s ease, color 0.2s ease;
     }
-
     .settings-icon:hover {
       transform: rotate(20deg);
       color: #000;
     }
 
-    /* MODAL BACKDROP */
+    /* ── SETTINGS MODAL BACKDROP ────────────────────────────────────── */
     .settings-modal {
       display: none;
       position: fixed;
@@ -34,55 +33,58 @@
       z-index: 2000;
     }
 
-    /* MODAL BOX */
+    /* ── SETTINGS MODAL BOX — wider to fit full URLs ─────────────────── */
     .settings-box {
       background: white;
-      padding: 20px;
+      padding: 24px;
       border-radius: 10px;
-      width: 320px;
+      width: min(580px, 92vw);   /* wide enough for a typical URL */
       box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    /* ── URL ROW ────────────────────────────────────────────────────── */
+    .url-row {
+      font-family: monospace;
+      font-size: 0.82rem;
+      word-break: break-all;
     }
   </style>
 </head>
 
 <body class="d-flex flex-column min-vh-100">
 
-  <!-- MAIN CONTENT CENTERED -->
+  <!-- ── MAIN CONTENT ─────────────────────────────────────────────── -->
   <main class="flex-grow-1 d-flex justify-content-center align-items-center">
     <div class="w-100" style="max-width: 600px;">
 
       <h1 class="text-center mb-4">EXB/XML Converter</h1>
 
-      <form method="POST" enctype="multipart/form-data">
+      <form id="convert-form" enctype="multipart/form-data">
 
         <!-- FILE INPUT -->
         <div class="mb-3">
           <label for="file" class="form-label">XML/EXB file</label>
-          <input 
-            class="form-control {% if error %}is-invalid{% endif %}" 
-            type="file" 
-            id="file" 
-            name="file" 
+          <input
+            class="form-control {% if error %}is-invalid{% endif %}"
+            type="file"
+            id="file"
+            name="file"
             accept=".xml,.exb"
           >
           {% if error %}
-          <div class="invalid-feedback">
-            {{ error }}
-          </div>
+          <div class="invalid-feedback">{{ error }}</div>
           {% endif %}
         </div>
 
-        <!-- MODEL SELECT + SETTINGS ICON -->
+        <!-- MODEL SELECT + GEAR ICON -->
         <div class="mb-3 d-flex justify-content-between align-items-center">
           <div class="flex-grow-1 me-3">
             <label for="model" class="form-label">Conversion model</label>
             <select class="form-select" id="model" name="model" required>
               <option value="" {% if not selected_model %}selected{% endif %}>Select a model</option>
-
               <option value="model1" {% if selected_model == "model1" %}selected{% endif %}>
                 Model 1: Simple Conversion
               </option>
-
               <option value="model2" {% if selected_model == "model2" %}selected{% endif %}>
                 Model 2: Full Normalization
               </option>
@@ -91,35 +93,43 @@
 
           <!-- SETTINGS ICON -->
           <div class="settings-icon" onclick="openSettings()">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" 
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 
-                       2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 
-                       0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 
-                       0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 
-                       1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 
-                       1-2.83-2.83l.06-.06a1.65 1.65 0 0 
-                       0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 
-                       2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 
-                       1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 
-                       0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 
-                       0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 
-                       2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 
-                       1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 
-                       2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 
-                       0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 
-                       2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z">
-              </path>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06
+                       a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09
+                       a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1
+                       1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3
+                       a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82
+                       l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09
+                       a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09
+                       a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06
+                       a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4
+                       h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
           </div>
         </div>
 
-        <!-- BUTTON -->
+        <!-- SUBMIT BUTTON -->
         <div class="text-center">
-          <button type="submit" class="btn btn-feri px-4 py-2">
+          <button type="submit" id="submit-btn" class="btn btn-feri px-4 py-2">
             Start conversion
           </button>
+        </div>
+
+        <!-- PROGRESS BAR (hidden until conversion starts) -->
+        <div id="progress-section" class="mt-4" style="display:none;">
+          <div class="progress mb-2" style="height: 20px;">
+            <div id="progress-bar"
+                 class="progress-bar progress-bar-striped progress-bar-animated"
+                 role="progressbar"
+                 style="width: 0%; background-color: #003366;
+                        transition: width 0.8s ease;">
+            </div>
+          </div>
+          <p class="text-center text-muted small mb-0" id="progress-label">
+            Preparing conversion…
+          </p>
         </div>
 
       </form>
@@ -127,7 +137,7 @@
     </div>
   </main>
 
-  <!-- FOOTER -->
+  <!-- ── FOOTER ───────────────────────────────────────────────────── -->
   <footer class="text-center py-4 mt-auto">
     <div class="text-white">
       Gonzalo Agúndez Sáez |
@@ -137,52 +147,31 @@
     </div>
   </footer>
 
-  <!-- SETTINGS MODAL -->
+  <!-- ── SETTINGS MODAL ───────────────────────────────────────────── -->
   <div id="settingsModal" class="settings-modal">
     <div class="settings-box">
       <h4 class="mb-3">Server Settings</h4>
 
-      <label class="form-label">RPC Server IP</label>
-      <input type="text" id="rpc_ip" class="form-control mb-3" value="localhost">
+      <!-- Saved URL list (populated by JS) -->
+      <label class="form-label fw-semibold">Saved servers</label>
+      <div id="url-list" class="mb-3"></div>
 
-      <label class="form-label">RPC Server Port</label>
-      <input type="number" id="rpc_port" class="form-control mb-3" value="6000">
+      <!-- Add new URL -->
+      <label class="form-label fw-semibold">Add server URL</label>
+      <div class="input-group mb-3">
+        <input type="text" id="new-url-input" class="form-control font-monospace"
+               placeholder="https://hostname"
+               style="font-size: 0.85rem;">
+        <button class="btn btn-feri" onclick="addUrl()">Add</button>
+      </div>
 
       <div class="d-flex justify-content-end">
-        <button class="btn btn-secondary me-2" onclick="closeSettings()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+        <button class="btn btn-secondary" onclick="closeSettings()">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- JS: SETTINGS MODAL -->
-  <script>
-    function openSettings() {
-      document.getElementById("settingsModal").style.display = "flex";
-    }
-
-    function closeSettings() {
-      document.getElementById("settingsModal").style.display = "none";
-    }
-
-    function saveSettings() {
-      alert("Settings saved (not implemented yet)");
-      closeSettings();
-    }
-  </script>
-
-  <!-- JS: CLEAN FILE INPUT ON PAGE RELOAD -->
-  <script>
-    window.addEventListener("load", function () {
-      if (performance.navigation.type === 1) {
-          const fileInput = document.getElementById("file");
-          if (fileInput) {
-              fileInput.value = "";
-          }
-      }
-    });
-  </script>
-
+  <!-- ── SCRIPTS ──────────────────────────────────────────────────── -->
   <script src="{{ url_for('static', filename='js/clean_errors.js') }}"></script>
 
 </body>
