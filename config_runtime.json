@@ -1,6 +1,8 @@
 {
     "RPC_SERVER_URL": "https://dsplab-demo.ietk.um.si/trsl/spk2std",
     "saved_urls": [
-        "https://dsplab-demo.ietk.um.si/trsl/spk2std"
+        "https://dsplab-demo.ietk.um.si/trsl/spk2std",
+        "https://example1",
+        "httpls://example2"
     ]
 }
