@@ -47,22 +47,25 @@ The application processes linguistic tiers, delegates text normalization to a Mo
 ---
 
 ## Project Structure
+
+```text
 xml-exb-converter/
-├── app.py                  # All Flask routes and server-side logic
-├── config_runtime.json     # Active server URL and list of saved servers
+├── app.py                # All Flask routes and server-side logic
+├── config_runtime.json    # Active server URL and list of saved servers
 ├── Dockerfile
 ├── requirements.txt
 ├── README.md
 ├── templates/
-│   └── index.html          # Jinja2 template (single-page interface)
+│   └── index.html        # Jinja2 template (single-page interface)
 └── static/
-├── css/
-│   └── styles.css      # FERI colour scheme
-├── js/
-│   └── clean_errors.js # Client-side behaviour (errors, fetch, settings)
-├── interface.png
-├── progress_bar.png
-└── server_settings.png
+    ├── css/
+    │   └── styles.css    # FERI colour scheme
+    ├── js/
+    │   └── clean_errors.js # Client-side behaviour (errors, fetch, settings)
+    ├── interface.png
+    ├── progress_bar.png
+    └── server_settings.png
+```
 
 ---
 
